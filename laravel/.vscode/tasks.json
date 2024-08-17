@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "My_commande",
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "artisan-serve",
+                "websockets"
+            ]
+        },
+        {
+            "label": "artisan-serve",
+            "type": "shell",
+            "command": "php artisan serve",
+            "presentation": {
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "websockets",
+            "type": "shell",
+            "command": "php artisan websockets:serve",
+            "presentation": {
+                "panel": "dedicated"
+            }
+        }
+    ]
+}

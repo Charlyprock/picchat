@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "vuejs"
+		},
+		{
+			"path": "laravel"
+		}
+	],
+	"settings": {
+		"diffEditor.codeLens": false
+	}
+}
