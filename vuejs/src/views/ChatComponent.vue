@@ -378,9 +378,9 @@
                
                 // on verifier si c'est la page de l'emetteur qui est ouverte cote recepteur
                 if (e.emetteur_id == this.recepteur.id) { // l'utilisateur a vue (on marque 2)
-                    this.affiche_message(e.messages.messages)
+                    // this.affiche_message(e.messages.messages)
                     form.status = 2
-                    this.statut_messages(form)
+                    this.statut_messages(form) // retourne deja le message actualiser
 
                 } else {  // l'utilisateur a reçu(on marque 1, // dans l'ideal: 0 pour quant il n'a par recus mais c'est parti)
                     console.log("je ne suis pas sur ta page");
@@ -394,6 +394,7 @@
 
             }).listen('SetVueMessagesEv',(e)=>{
                 this.affiche_message(e.messages)
+                console.log("set_vue_messages")
 
             })
 
@@ -532,19 +533,17 @@
             affiche_user(id){
 
                 if(id != this.recepteur.id){
-                    
+                    this.recepteur.id = id
                     localStorage.setItem('recepteur_id', id)
                     this.get_recepteur(id)
-                    this.get_all_messages(id)
 
                     // pour mettre tous les message nom vu à vu
                     // requette pour marquer les message en 
-                    // var form = {
-                    //     status: 2,
-                    //     recepteur_id: this.recepteur.id
-                    // }
-                    // console.log("j'ai cliker")
-                    // this.statut_messages(form)
+                    var form = {
+                        status: 2,
+                        recepteur_id: id
+                    }
+                    this.statut_messages(form)
 
                 }
                 
@@ -594,7 +593,14 @@
                 this.axios.defaults.headers.common.Authorization = `Bearer ${this.$store.state.token}`
                 this.axios.post(this.$store.state.url + '/statut_messages/', form)
                 .then(({data}) => {
-                    console.log(data)
+                    
+                    
+
+                    if (data.emetteur_id == this.recepteur.id) { // on affiche les messages car, cette utilisateur est sur la page de l'emetteur
+                        console.log("il", data)
+                        this.affiche_message(data.messages)
+
+                    }
 
                 }).catch(e=>console.log(e))
             },
