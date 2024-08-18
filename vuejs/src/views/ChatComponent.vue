@@ -3,7 +3,7 @@
         <section class="flex w-full h-screen fixed top-0 bottom-0 right-0 left-0">
 
             <!-- la sidebar -->
-            <Contact v-bind:obseveur_read="detec_read.change" @get_id="affiche_user"></Contact>
+            <Contact v-bind:obseveur_read="detec_read.change" @get_user_recep="affiche_user"></Contact>
 
             <!-- la partie message -->
             <section class="voisin h-screen w-[70%] py-3 bg-white dark:bg-zinc-800">
@@ -18,14 +18,14 @@
                     <section class="flex space-x-2">
 
                         <div class="w-10 h-10 overflow-hidden rounded-lg border">
-                            <img :src="$store.state.url_images + recepteur.image" class="w-full h-full object-cover">
+                            <img :src="$store.state.url_images + recepteur?.image" class="w-full h-full object-cover">
                         </div>
 
                         <!-- le en ligne et le nom -->
                         <section class="">
 
                             <div class="font-semibold dark:text-white">
-                                {{ recepteur.name }}
+                                {{ recepteur?.name }}
                             </div>
 
                             <div class="text-blue-500 text-sm">
@@ -72,10 +72,10 @@
 
                     <section v-for="message in messages" :key="message" class="pb-[2px]">
 
-                        <section :class="message.emetteur_id == recepteur.id ? 'justify-start': 'justify-end'" class="w-full flex">
+                        <section :class="message.emetteur_id == recepteur?.id ? 'justify-start': 'justify-end'" class="w-full flex">
 
                             <!-- le message -->
-                            <div :class="message.emetteur_id == recepteur.id ? 'bg-blue-500 rounded-tr-xl my-2 mr-3': 'bg-green-500 rounded-tl-xl'" class="click-message text-white p-2 w-fit min-w-[100px] max-w-[400px] rounded-bl-xl rounded-br-xl">
+                            <div :class="message.emetteur_id == recepteur?.id ? 'bg-blue-500 rounded-tr-xl my-2 mr-3': 'bg-green-500 rounded-tl-xl'" class="click-message text-white p-2 w-fit min-w-[100px] max-w-[400px] rounded-bl-xl rounded-br-xl">
 
                                 <!-- le texte -->
                                 <div>
@@ -91,7 +91,7 @@
                                     </div>
 
                                     <!-- le statut -->
-                                    <div v-if="message.emetteur_id != recepteur.id" class="bg-white w-1 h-1 p-2 rounded-full flex justify-center items-center">
+                                    <div v-if="message.emetteur_id != recepteur?.id" class="bg-white w-1 h-1 p-2 rounded-full flex justify-center items-center">
                                         <div :class="{'bg-blue-500': message.status == 2, 'bg-green-500': message.status == 1, 'bg-white': message.status == null} " class=" rounded-full p-1"></div>
                                     </div>
 
@@ -297,9 +297,7 @@
             return{
                 messages: '',   // les messages recuperer
                 user: "",       // l'utilisateur connecter
-                recepteur: {    // le recepteur courant
-                    id: localStorage.getItem('recepteur_id'),
-                },
+                recepteur: this.$store.state.recepteur,   // le recepteur courant},
 
                 boucle: 15,      // pour tester mes boucles for, cette variable est temporaire
                 textArea: {
@@ -332,30 +330,44 @@
 
         created(){
 
-            if (this.recepteur.id) {
+            if (this.recepteur) {
                 this.get_recepteur(this.recepteur.id)
-                this.get_all_messages(this.recepteur.id)
             }
-
-            // this.scroll_all()   // pour faire sroller le conteneur de message jusqu'a la fin
         },
 
         async mounted(){
 
             // pour recuperer les donners de l'utilisateur connecter
-            if (this.$store.state.token) {
+            if (this.$store.state.token && this.$store.state.user == null) { // on recupere dans la base de donnee
 
                 this.axios.defaults.headers.common.Authorization = `Bearer ${this.$store.state.token}`
                 await this.axios.get(this.$store.state.url + '/get_user')
                 .then(({data}) => {
+
+                    (async() => {
+                        const encode = await this.$fonct.encrypt(JSON.stringify(data.user), this.$store.state.cles)
+                        localStorage.setItem("user", encode)
+                    })()
 
                     this.$store.state.user = data.user
                     this.user = data.user
 
                 }).catch(e=>console.log(e))
                 
+            } else {  // on recupere les donner dans le localStorage
+                    
+                var data = localStorage.getItem('user')
+
+                if (data) {
+                    var d = await this.$fonct.decrypt(new Uint8Array(JSON.parse(data).encrypt),
+                                                new Uint8Array(JSON.parse(data).iv), this.$store.state.cles)
+
+                    this.$store.state.user = JSON.parse(d)
+                    this.user = JSON.parse(d)
+                } 
             }
 
+            // pour recuperer le voisin pour le redimentionnement
             setTimeout(() => {
                 this.$store.state.voisin = document.querySelector('.voisin')     // pour le redimentionnement de la section contact
             }, 1000);
@@ -368,8 +380,9 @@
             })
 
 
-            window.Echo.private('test-channel-' + this.user.id).listen('TestName',(e)=>{
- 
+            window.Echo.private('test-channel-' + this.user.id)
+            .listen('TestName',(e)=>{ // pour le recepteur
+               
                 // requette pour marquer les message en 
                 var form = {
                     status: 0,
@@ -378,13 +391,13 @@
                
                 // on verifier si c'est la page de l'emetteur qui est ouverte cote recepteur
                 if (e.emetteur_id == this.recepteur.id) { // l'utilisateur a vue (on marque 2)
-                    // this.affiche_message(e.messages.messages)
+                    console.log("je suis sur ta page...")
                     form.status = 2
-                    this.statut_messages(form) // retourne deja le message actualiser
+                    this.affiche_message(e.messages.messages)
+                    this.statut_messages(form)
 
                 } else {  // l'utilisateur a reçu(on marque 1, // dans l'ideal: 0 pour quant il n'a par recus mais c'est parti)
-                    console.log("je ne suis pas sur ta page");
-                    
+                    console.log("je ne suis sur ta page...")
                     form.status = 1
                     form.recepteur_id = e.emetteur_id
                     this.statut_messages(form)
@@ -392,9 +405,14 @@
                     this.actualise_contact() // on reactualise la partie contact
                 }
 
-            }).listen('SetVueMessagesEv',(e)=>{
+            })
+            .listen('SetVueMessagesEv',(e)=>{ // pour l'emetteur
+            console.log("SetVueMessagesEv...")
                 this.affiche_message(e.messages)
-                console.log("set_vue_messages")
+
+            })
+            .listen('UserStatusEv',()=>{ 
+                console.log("UserStatus")
 
             })
 
@@ -496,16 +514,29 @@
 
             },
 
-            get_recepteur(id){
+            async get_recepteur(recepteur=null){
 
-                this.axios.defaults.headers.common.Authorization = `Bearer ${this.$store.state.token}`
-                this.axios.get(this.$store.state.url + '/get_recepteur/' + id)
-                .then(({data}) => {
+                // pour recuperer les donners du recepteur
+               // on recupere les donner dans le localStorage
+                    
+                var recept
+                if (recepteur == null) { // on recuper dans le localStorage
+                    var data = localStorage.getItem('recepteur')
+                
+                    if (data) {
+                        var json = JSON.parse(data)
+                        var d = await this.$fonct.decrypt(new Uint8Array(json.encrypt),
+                                                    new Uint8Array(json.iv), this.$store.state.cles)
 
-                    this.recepteur = data.recepteur
+                        recept = JSON.parse(d)
+                    } 
+                } else { // on recupere directement le recepteur
+                    recept = recepteur
+                }
 
-                }).catch(e=>console.log(e))
-
+                this.$store.state.recepteur = recept
+                this.recepteur = recept
+                this.get_all_messages(this.recepteur.id)
             },
 
             get_all_messages(id){
@@ -522,7 +553,7 @@
 
             affiche_message(messages){
                 this.messages = messages
-
+                console.log("affiche_message")
                 this.actualise_contact()  // pour actualiser la partie des contacts
 
                 this.scroll_all()   // pour faire sroller le conteneur de message jusqu'a la fin
@@ -530,20 +561,20 @@
             },
 
             // methode qui ce declanche lorsqu'on clique sur le contact d'une personne
-            affiche_user(id){
+            affiche_user(recepteur){
 
-                if(id != this.recepteur.id){
-                    this.recepteur.id = id
-                    localStorage.setItem('recepteur_id', id)
-                    this.get_recepteur(id)
+                if(recepteur.id != this.recepteur?.id){
+                 
+                    this.recepteur = recepteur
+                    this.get_recepteur(recepteur)
 
                     // pour mettre tous les message nom vu à vu
                     // requette pour marquer les message en 
-                    var form = {
-                        status: 2,
-                        recepteur_id: id
-                    }
-                    this.statut_messages(form)
+                    // var form = {
+                    //     status: 2,
+                    //     recepteur_id: this.recepteur.id
+                    // }
+                    // this.statut_messages(form)
 
                 }
                 
@@ -571,7 +602,7 @@
                     this.axios.defaults.headers.common.Authorization = `Bearer ${this.$store.state.token}`
                     this.axios.post(this.$store.state.url + '/send_message', form)
                     .then(({data}) => {
-
+                        // console.log("send", data)
                         this.affiche_message(data.messages)
 
                     }).catch(e=>console.log(e))
@@ -593,14 +624,7 @@
                 this.axios.defaults.headers.common.Authorization = `Bearer ${this.$store.state.token}`
                 this.axios.post(this.$store.state.url + '/statut_messages/', form)
                 .then(({data}) => {
-                    
-                    
-
-                    if (data.emetteur_id == this.recepteur.id) { // on affiche les messages car, cette utilisateur est sur la page de l'emetteur
-                        console.log("il", data)
-                        this.affiche_message(data.messages)
-
-                    }
+                    console.log(data)
 
                 }).catch(e=>console.log(e))
             },

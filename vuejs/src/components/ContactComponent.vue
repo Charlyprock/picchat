@@ -17,7 +17,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                 </div>
-                {{ $store.state.user.name }} {{ $store.state.user.id }}
+                {{ $store.state.user?.name }} {{ $store.state.user?.id }}
                 <!-- logo -->
                 <div class="uppercase italic pt-1">
                     picChat
@@ -46,7 +46,7 @@
         <section class="h-[80%] pr-1">
             <section class="overflow-y-scroll dark:scrollbar dark:scrollbar-track-zinc-900 dark:scrollbar-thumb-black h-full">
 
-                <div @click="send_id(user.user.id)" v-for="user in users.users" :key="user" :class="user.user.id == actif_user_id ? 'border-blue-500' :'border-gray-300 dark:border-slate-900'" class="bg-white dark:bg-zinc-900 duration-500 p-2 m-3 flex space-x-2 border-b hover:shadow-md dark:hover:shadow-xl cursor-pointer">
+                <div @click="send_recepteur(user.user)" v-for="user in users.users" :key="user" :class="user.user.id == $store.state.recepteur?.id ? 'border-blue-500' :'border-gray-300 dark:border-slate-900'" class="bg-white dark:bg-zinc-900 duration-500 p-2 m-3 flex space-x-2 border-b hover:shadow-md dark:hover:shadow-xl cursor-pointer">
 
                     <!-- photo de profil et nombre de message nom lu --> 
                     <div class="relative w-14">
@@ -122,7 +122,7 @@
 
             <div class="w-[80%] h-fit max-h-[80%] border border-blue-500 rounded-md bg-white dark:bg-zinc-900">
 
-                <div @click="send_id(user.id)" v-for="user in allUsers" :key="user" class="bg-white dark:bg-zinc-900 p-2 m-3 flex space-x-2 border-b dark:border-none border-gray-300 hover:shadow-md dark:hover:shadow-xl cursor-pointer">
+                <div @click="send_recepteur(user)" v-for="user in allUsers" :key="user" class="bg-white dark:bg-zinc-900 p-2 m-3 flex space-x-2 border-b dark:border-none border-gray-300 hover:shadow-md dark:hover:shadow-xl cursor-pointer">
 
                     <!-- photo de profil et nombre nom lu --> 
                     <div class="relative">
@@ -171,8 +171,6 @@
                 },
                 allUsers: '',
                 visibleAllUser: false,
-
-                actif_user_id: localStorage.getItem('recepteur_id') // le recepteur courant
             }
             
         },
@@ -245,9 +243,13 @@
 
         methods: {
 
-            send_id(id){
-                this.actif_user_id = id
-                this.$emit('get_id', id)
+            async send_recepteur(recepteur){
+                (async() => { // sauvegarge du recepeur dans le localstorage
+                    const encode = await this.$fonct.encrypt(JSON.stringify(recepteur), this.$store.state.cles)
+                    localStorage.setItem("recepteur", encode)
+                })()
+
+                this.$emit('get_user_recep', recepteur)
                 this.visibleAllUser = false
             },
 

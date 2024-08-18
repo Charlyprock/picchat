@@ -120,5 +120,65 @@ export default {
         var d = String(date.getDate()).padStart(2, "0")
 
         return `${y}/${m}/${d}`
+    },
+
+    async import_key(k){
+        const key = new TextEncoder().encode(k)
+        var keyData
+
+        if (key.length > 32) {
+            keyData = key.slice(0, 32)
+        } else {
+            keyData = new Uint8Array(32)
+            keyData.set(key)
+        }
+
+        return await window.crypto.subtle.importKey(
+            "raw",
+            keyData,
+            {name: "AES-GCM"},
+            false,
+            ["encrypt", "decrypt"]
+        )
+    },
+
+    async generate_key(){
+        return await window.crypto.subtle.generateKey(
+            {
+                name: "AES-GCM",
+                length: 256,
+            },
+            true,
+            ["encrypt", "decrypt"]
+        )
+    },
+
+    async encrypt(data, key){
+
+        const iv = window.crypto.getRandomValues(new Uint8Array(12)) // initialisation du vecteur
+        const encode = new TextEncoder().encode(data)
+        const encryptData = await window.crypto.subtle.encrypt(
+            {
+                name: "AES-GCM",
+                iv: iv
+            },
+            await this.import_key(key), 
+            encode
+        )
+
+        return JSON.stringify({"encrypt": Array.from(new Uint8Array(encryptData)), "iv": Array.from(iv)})
+    },
+
+    async decrypt(encryptData, iv, key){
+        const decryptData = await window.crypto.subtle.decrypt(
+            {
+                name: "AES-GCM",
+                iv: iv
+            },
+            await this.import_key(key),
+            encryptData
+        )
+        
+        return new TextDecoder().decode(decryptData)
     }
 }

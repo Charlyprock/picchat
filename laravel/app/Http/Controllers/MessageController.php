@@ -6,6 +6,8 @@ use App\Events\SetVueMessagesEv;
 use App\Models\User;
 use App\Models\Message;
 use App\Events\TestName;
+use App\Events\UserSatus;
+use App\Events\UserStatusEv;
 use Illuminate\Http\Request;
 
 class MessageController extends Controller
@@ -62,6 +64,7 @@ class MessageController extends Controller
         $MessObj = new Message();
         $messages = $MessObj->getMessagesByUser(auth()->user()->id, $request->recepteur_id);
         broadcast(new SetVueMessagesEv($messages, $request->recepteur_id));
+        // broadcast(new UserStatusEv($request->recepteur_id));
 
         return response()->json([
             'messages' => $messages,
