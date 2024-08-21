@@ -37,11 +37,13 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/get_all_user',[userController::class,'get_all_user']);
     Route::get('/all_user',[userController::class,'all_user']);
     Route::get('/get_recepteur/{id}',[userController::class,'get_recepteur']);
+    Route::post('/send_ligne',[userController::class,'send_ligne']);
 
     //messages
     Route::get('/get_all_messages/{id}',[MessageController::class,'get_all_messages']);
     Route::post('/statut_messages',[MessageController::class,'statut_messages']);
     Route::post('/send_message',[MessageController::class,'send_message']);
+    Route::post('/send_write',[MessageController::class,'send_write']);
     
     
 });

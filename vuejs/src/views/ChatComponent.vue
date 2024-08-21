@@ -3,7 +3,13 @@
         <section class="flex w-full h-screen fixed top-0 bottom-0 right-0 left-0">
 
             <!-- la sidebar -->
-            <Contact v-bind:obseveur_read="detec_read.change" @get_user_recep="affiche_user"></Contact>
+            <Contact 
+                v-bind:obseveur_read="detec_send.change" 
+                v-bind:obseveur_write="obseveur_write"
+                v-bind:obseveur_enligne="obseveur_enligne"
+                @get_user_recep="affiche_user"
+            >
+            </Contact>
 
             <!-- la partie message -->
             <section class="voisin h-screen w-[70%] py-3 bg-white dark:bg-zinc-800">
@@ -28,8 +34,19 @@
                                 {{ recepteur?.name }}
                             </div>
 
-                            <div class="text-blue-500 text-sm">
-                                en ligne
+                            <!-- ecrir et en ligne -->
+                            <div>
+                                <div v-if="user_write.recepteur" class="text-blue-500 text-sm">
+                                    Ecrir...
+                                </div>
+
+                                <div v-if="recepteur?.status == 'en ligne'" class="text-blue-500 text-sm">
+                                    {{ recepteur?.status }}
+                                </div>
+
+                                <div v-if="recepteur?.status != 'en ligne'" class="text-blue-500 text-sm">
+                                    {{ recepteur?.status?.slice(11, 16) }}
+                                </div>
                             </div>
 
                         </section>
@@ -92,7 +109,7 @@
 
                                     <!-- le statut -->
                                     <div v-if="message.emetteur_id != recepteur?.id" class="bg-white w-1 h-1 p-2 rounded-full flex justify-center items-center">
-                                        <div :class="{'bg-blue-500': message.status == 2, 'bg-green-500': message.status == 1, 'bg-white': message.status == null} " class=" rounded-full p-1"></div>
+                                        <div :class="{'bg-blue-500': message.status == 2, 'bg-green-500': message.status == 1, 'bg-white': message.status == 0, 'bg-gray-500': message.status == null} " class=" rounded-full p-1"></div>
                                     </div>
 
                                 </div>
@@ -190,7 +207,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
 
-                        <textarea @input="keyup_textarea" @blur="stop_focus" class="text-area w-full h-full dark:bg-zinc-900 max-h-64 p-2 resize-none outline-none dark:scrollbar dark:scrollbar-track-zinc-900 dark:scrollbar-thumb-black" v-model="textMessage"></textarea>
+                        <textarea @input="keyup_textarea" @blur="stop_focus" @keydown="star_write" class="text-area w-full h-full dark:bg-zinc-900 max-h-64 p-2 resize-none outline-none dark:scrollbar dark:scrollbar-track-zinc-900 dark:scrollbar-thumb-black" v-model="textMessage"></textarea>
 
                     </div>
 
@@ -299,11 +316,16 @@
                 user: "",       // l'utilisateur connecter
                 recepteur: this.$store.state.recepteur,   // le recepteur courant},
 
-                boucle: 15,      // pour tester mes boucles for, cette variable est temporaire
                 textArea: {
                     visible: false,
                     taille: '',
                     objet: '',
+                },
+
+                user_write: {
+                    recepteur: false,
+                    write: false,
+                    time: null
                 },
 
                 visibleFiltre: false,
@@ -319,11 +341,13 @@
                 
                 textMessage: '',  // le message ecrit dans l'input
 
-                detec_read: {   // pour actualiser la partie des contacts
+                detec_send: {   // pour actualiser la partie des contacts afin de montrer le message qui vient d'ecre envoyer
                     read: false,
                     change: ""
                 },
 
+                obseveur_write: null, // pour actualiser la partie contacts afin de montre l'utilisateur qui ecrir
+                obseveur_enligne: null, // pour actualiser la partie contacts afin de montre l'utilisateur qui est en ligne
             }
             
         },
@@ -372,16 +396,29 @@
                 this.$store.state.voisin = document.querySelector('.voisin')     // pour le redimentionnement de la section contact
             }, 1000);
 
+            // pour observer si cette onglet est ouvert
+            this.observe_visible()
+
             
 
-            window.Echo.channel('public').listen('Hello',(e)=>{
+            window.Echo.channel('public')
+            .listen('Hello',(e) =>{
                 console.log('go public' + e);
                 // this.messages = e.welcome
+            })
+            .listen('UserStatusEv',(e) =>{ // modifie si l'utilisateur est en ligne ou pas
+
+                if (e.emetteur_id == this.recepteur.id) {
+                    this.recepteur.status = e.enligne
+                    this.$fonct.set_recept_storage(this.recepteur) 
+                }
+
+                this.obseveur_enligne = e
             })
 
 
             window.Echo.private('test-channel-' + this.user.id)
-            .listen('TestName',(e)=>{ // pour le recepteur
+            .listen('TestName',(e) =>{ // pour le recepteur
                
                 // requette pour marquer les message en 
                 var form = {
@@ -406,14 +443,18 @@
                 }
 
             })
-            .listen('SetVueMessagesEv',(e)=>{ // pour l'emetteur
-            console.log("SetVueMessagesEv...")
+            .listen('SetVueMessagesEv',(e) =>{ // pour l'emetteur
+                console.log("SetVueMessagesEv...")
                 this.affiche_message(e.messages)
 
             })
-            .listen('UserStatusEv',()=>{ 
-                console.log("UserStatus")
+            .listen('UserWriteEv', (e) => { // modifie si l'utilisateur ecrit ou pas
 
+                if (e.emetteur_id == this.recepteur.id) {
+                    this.user_write.recepteur = e.write
+                }
+
+                this.obseveur_write = e // pour actualiser la partie contacts afin de montre l'utilisateur qui ecrir
             })
 
         },
@@ -521,21 +562,13 @@
                     
                 var recept
                 if (recepteur == null) { // on recuper dans le localStorage
-                    var data = localStorage.getItem('recepteur')
-                
-                    if (data) {
-                        var json = JSON.parse(data)
-                        var d = await this.$fonct.decrypt(new Uint8Array(json.encrypt),
-                                                    new Uint8Array(json.iv), this.$store.state.cles)
-
-                        recept = JSON.parse(d)
-                    } 
+                    recept = await this.$fonct.get_recept_storage()
                 } else { // on recupere directement le recepteur
                     recept = recepteur
                 }
 
                 this.$store.state.recepteur = recept
-                this.recepteur = recept
+                this.recepteur = this.$store.state.recepteur
                 this.get_all_messages(this.recepteur.id)
             },
 
@@ -566,19 +599,16 @@
                 if(recepteur.id != this.recepteur?.id){
                  
                     this.recepteur = recepteur
-                    this.get_recepteur(recepteur)
+                    this.get_recepteur(recepteur) // on recupere ces donnees pour la rendre accessible
 
                     // pour mettre tous les message nom vu à vu
-                    // requette pour marquer les message en 
-                    // var form = {
-                    //     status: 2,
-                    //     recepteur_id: this.recepteur.id
-                    // }
-                    // this.statut_messages(form)
+                    var form = {
+                        status: 2,
+                        recepteur_id: this.recepteur.id
+                    }
+                    this.statut_messages(form)
 
                 }
-                
-
             },
 
             send_message(){
@@ -591,11 +621,16 @@
                     form.append('message', this.textMessage)
                     form.append('heure', this.$fonct.get_heure())
                     form.append('date', this.$fonct.get_date())
-                    form.append('status', 1)
+                    form.append('status', 0)
                     form.append('recepteur_id', this.recepteur.id)
                     form.append('emetteur_id', this.user.id)
 
-                    this.messages.push(form)
+                    var mess = {}  // pour l'afficharge directe
+                    form.forEach((val, key) => {
+                        mess[key] = val
+                    });
+
+                    this.messages.push(mess)
 
                     this.textMessage = ''
 
@@ -614,8 +649,8 @@
 
             // on reactualise la partie contact
             actualise_contact(){
-                this.detec_read.read = !this.detec_read.read
-                this.detec_read.change = this.detec_read.read
+                this.detec_send.read = !this.detec_send.read
+                this.detec_send.change = this.detec_send.read
             },
 
             // pour le statut des messages
@@ -627,6 +662,67 @@
                     console.log(data)
 
                 }).catch(e=>console.log(e))
+            },
+
+            // lorsque l'utilisateur ecrir
+            star_write(){
+
+                if (this.user_write.write == false) {
+                    this.send_write(1)
+                }
+
+                this.user_write.write = true
+                clearTimeout(this.user_write.time)
+
+                this.user_write.time = setTimeout(() => {
+                    this.user_write.write = false
+                    this.send_write(0)
+                    console.log("stope...")
+                }, 1500);
+            },
+
+            // la requette pour envoyer au serveur lorsque l'utilisateur ecris ou arrete d'ecrire
+            send_write(write){
+
+                const form = new FormData
+                form.append('emetteur_id', this.$store.state.user.id)
+                form.append('recepteur_id', this.recepteur.id)
+                form.append('write', write)
+                
+                this.axios.defaults.headers.common.Authorization = `Bearer ${this.$store.state.token}`
+                this.axios.post(this.$store.state.url + '/send_write/', form)
+                .then(({data}) => {
+                    console.log(data)
+                }).catch(e=>console.log(e))
+            },
+
+             // la requette pour envoyer au serveur lorsque l'utilisateur est en ligne ou pas
+            send_ligne(EnLigne){
+
+                const form = new FormData
+                form.append('emetteur_id', this.$store.state.user.id)
+                form.append('enligne', EnLigne)
+                
+                this.axios.defaults.headers.common.Authorization = `Bearer ${this.$store.state.token}`
+                this.axios.post(this.$store.state.url + '/send_ligne/', form)
+                .then(({data}) => {
+                    console.log(data)
+                }).catch(e=>console.log(e))
+            },
+
+            // pour observer si cette onglet est ouvert
+            observe_visible(){
+
+                document.addEventListener("visibilitychange", () => {
+
+                    if (document.visibilityState == 'visible') {
+                        this.send_ligne("en ligne")
+                    } else {
+                        var time = this.$fonct.get_date() + " " + this.$fonct.get_heure()
+                        this.send_ligne(time)
+                    }
+                    
+                })
             },
 
             publics(){

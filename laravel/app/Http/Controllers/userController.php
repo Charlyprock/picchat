@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\UserStatusEv;
 use App\Jobs\EnvoiMail;
 use App\Mail\mailTest;
 use App\Models\Message;
@@ -131,5 +132,14 @@ class userController extends Controller
         $recepteur = User::find($id);
 
         return response()->json(['recepteur' => $recepteur]);
+    }
+
+    public function send_ligne(Request $request) {
+
+        $user = User::find($request->emetteur_id);
+        $user->status = $request->enligne;
+        $user->save();
+
+        broadcast(new UserStatusEv($request->enligne, $request->emetteur_id));
     }
 }

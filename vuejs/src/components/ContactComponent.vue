@@ -70,14 +70,24 @@
                                 {{ user.user.name }}
                             </div>
 
-                            <!-- la date -->
+                            <!-- la en ligne -->
                             <div class="flex text-xs dark:text-gray-300f text-blue-500 pt-2 justify-end pr-1 w-full">
-                                en ligne
+                                <div v-if="user.user.write">
+                                    Ecrir...
+                                </div>
+
+                                <div v-if="user.user.status == 'en ligne'">
+                                    {{ user.user.status }}
+                                </div>
+
+                                <div v-if="user.user.status != 'en ligne'">
+                                    {{ user.user.status.slice(11, 16) }}
+                                </div>
                             </div>
 
                         </div>
 
-                        <!-- le dernier message et s'il est en ligne-->
+                        <!-- le dernier message et le status-->
                         <div class="flex justify-between items-center">
 
                             <div class="text-sm whitespace-nowrap dark:text-gray-300 w-[40%] overflow-hidden text-ellipsis">
@@ -162,6 +172,8 @@
 
         props:{
             obseveur_read: null,
+            obseveur_write: null,
+            obseveur_enligne: null,
         },
         
         data(){
@@ -178,6 +190,15 @@
         watch:{
             obseveur_read(){
                 this.get_all_user()
+            },
+
+            obseveur_write(nouv){
+                this.users.users = this.$fonct.change_val_att(this.users.users, "id", nouv.emetteur_id, "write", nouv.write)
+            },
+
+            obseveur_enligne(nouv){
+                this.users.users = this.$fonct.change_val_att(this.users.users, "id", nouv.emetteur_id, "status", nouv.enligne)
+                console.log(nouv)
             }
         },
 
@@ -244,10 +265,8 @@
         methods: {
 
             async send_recepteur(recepteur){
-                (async() => { // sauvegarge du recepeur dans le localstorage
-                    const encode = await this.$fonct.encrypt(JSON.stringify(recepteur), this.$store.state.cles)
-                    localStorage.setItem("recepteur", encode)
-                })()
+                // sauvegarge du recepeur dans le localstorage
+                this.$fonct.set_recept_storage(recepteur)
 
                 this.$emit('get_user_recep', recepteur)
                 this.visibleAllUser = false
@@ -276,6 +295,7 @@
                 .then(({data}) => {
 
                     this.users = data
+                    this.$fonct.add_attribute(data.users, "write", false)
 
                 }).catch(e=>console.log(e))
 

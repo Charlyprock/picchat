@@ -11,7 +11,7 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 
-class UserStatusEv implements ShouldBroadcast , ShouldBroadcastNow
+class UserWriteEv implements ShouldBroadcast , ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -20,22 +20,25 @@ class UserStatusEv implements ShouldBroadcast , ShouldBroadcastNow
      *
      * @return void
      */
-    public $enligne;
+    public $write;
     public $emetteur_id;
+    public $recepteur_id;
 
-    public function __construct($enligne, $emetteur_id)
+    public function __construct(bool $write, $emetteur_id, $recepteur_id)
     {
-        $this->enligne = $enligne;
+        $this->write = $write;
         $this->emetteur_id = $emetteur_id;
+        $this->recepteur_id = $recepteur_id;
     }
 
     public function broadcastWith()
     {
         return [
-            "enligne" => $this->enligne,
-            "emetteur_id" => $this->emetteur_id
+            'write' => $this->write,
+            'emetteur_id' => $this->emetteur_id
         ];
     }
+
 
     /**
      * Get the channels the event should broadcast on.
@@ -44,6 +47,6 @@ class UserStatusEv implements ShouldBroadcast , ShouldBroadcastNow
      */
     public function broadcastOn()
     {
-        return new Channel('public');
+        return new PrivateChannel('test-channel-' . $this->recepteur_id);
     }
 }

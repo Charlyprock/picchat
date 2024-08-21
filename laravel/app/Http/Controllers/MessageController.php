@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Events\TestName;
 use App\Events\UserSatus;
 use App\Events\UserStatusEv;
+use App\Events\UserWriteEv;
 use Illuminate\Http\Request;
 
 class MessageController extends Controller
@@ -71,4 +72,10 @@ class MessageController extends Controller
             'emetteur_id' => $request->recepteur_id
         ]);
     }
+
+    public function send_write(Request $request) {
+        broadcast(new UserWriteEv($request->write, $request->emetteur_id, $request->recepteur_id));
+    }
+
+    
 }

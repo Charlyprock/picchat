@@ -1,3 +1,5 @@
+import store from "@/store/store";
+
 export default {
 
     click_droit(class_modal, class_click){
@@ -180,5 +182,48 @@ export default {
         )
         
         return new TextDecoder().decode(decryptData)
+    },
+
+    add_attribute(tableau, new_key, new_val){
+        
+        for (let i = 0; i < tableau.length; i++) {
+            const list = tableau[i]["user"]
+
+            list[new_key] = new_val
+        }
+       
+        return tableau
+    },
+
+    change_val_att(tableau, test_key, test_val, change_key, new_val){
+        
+        for (let i = 0; i < tableau.length; i++) {
+            const list = tableau[i]["user"];
+
+            if(list[test_key] == test_val){
+                list[change_key] = new_val
+            }
+        }
+        
+        return tableau
+    },
+
+    async get_recept_storage(){
+        var data = localStorage.getItem('recepteur')
+                
+        if (data) {
+            var json = JSON.parse(data)
+            var d = await this.decrypt(new Uint8Array(json.encrypt),
+                                        new Uint8Array(json.iv), store.state.cles)
+
+            return JSON.parse(d)
+        }
+
+        return null
+    },
+
+    async set_recept_storage(recepteur){
+        const encode = await this.encrypt(JSON.stringify(recepteur), store.state.cles)
+        localStorage.setItem("recepteur", encode)
     }
 }
