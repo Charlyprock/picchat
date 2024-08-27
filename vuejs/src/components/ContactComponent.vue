@@ -102,7 +102,7 @@
                                 </div>
 
                                 <!-- statut -->
-                                <div class="w-2 h-2 mt-[1.5px] rounded-full bg-blue-400"></div>
+                                <div :class="{'bg-blue-500': user.lastMessage.status == 2, 'bg-green-500': user.lastMessage.status == 1, 'bg-white': user.lastMessage.status == 0, 'bg-gray-500': user.lastMessage.status == null} " class="w-2 h-2 mt-[1.5px] rounded-full"></div>
                             </div>
 
                         </div>
@@ -266,8 +266,6 @@
 
             async send_recepteur(recepteur){
                 // sauvegarge du recepeur dans le localstorage
-                this.$fonct.set_recept_storage(recepteur)
-
                 this.$emit('get_user_recep', recepteur)
                 this.visibleAllUser = false
             },

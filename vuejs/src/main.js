@@ -9,6 +9,7 @@ import Echo from "laravel-echo"
 
 import store from './store/store'
 import fonct from "./function/fonct.js"
+import animation from "./function/animation.js"
 
 
 
@@ -57,6 +58,7 @@ const i18n = createI18n({
 const app = createApp(App)
 
 app.config.globalProperties.$fonct = fonct
+app.config.globalProperties.$animation = animation
 
 app.use(router).use(VueAxios, axios).use(i18n).use(store)
 .mount('#app')

@@ -1,5 +1,10 @@
 <template>
     <div> 
+
+        <!-- la camera -->
+        <cameraComponent v-bind:observe_open="open_camera"></cameraComponent>
+
+        <!-- le composant -->
         <section class="flex w-full h-screen fixed top-0 bottom-0 right-0 left-0">
 
             <!-- la sidebar -->
@@ -92,7 +97,7 @@
                         <section :class="message.emetteur_id == recepteur?.id ? 'justify-start': 'justify-end'" class="w-full flex">
 
                             <!-- le message -->
-                            <div :class="message.emetteur_id == recepteur?.id ? 'bg-blue-500 rounded-tr-xl my-2 mr-3': 'bg-green-500 rounded-tl-xl'" class="click-message text-white p-2 w-fit min-w-[100px] max-w-[400px] rounded-bl-xl rounded-br-xl">
+                            <div @contextmenu="message_click_droit = message" :class="message.emetteur_id == recepteur?.id ? 'bg-blue-500 rounded-tr-xl my-2 mr-3': 'bg-green-500 rounded-tl-xl'" class="click-message text-white p-2 w-fit min-w-[100px] max-w-[400px] rounded-bl-xl rounded-br-xl">
 
                                 <!-- le texte -->
                                 <div>
@@ -150,7 +155,7 @@
                             <div :class="menu.visible" class="flex justify-between flex-wrap w-64 p-3 border-2 border-blue-500 rounded-md shadow-lg bg-white dark:bg-zinc-900 absolute z-[1000] -top-2 duration-500">
 
                                 <!-- la camera -->
-                                <div class="flex flex-col items-center justify-center cursor-pointer hover:scale-105 duration-75">
+                                <div @click="open_camera = true, close_menu()" class="flex flex-col items-center justify-center cursor-pointer hover:scale-105 duration-75">
 
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-blue-500">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -191,7 +196,7 @@
 
                             </div>
 
-                            <div @click="menu.visible = '-translate-y-full', visibleFiltre = true " class="text-blue-500 hover:bg-blue-500 hover:text-white duration-500 p-1 border border-gray-300 dark:bg-zinc-900 dark:border-black cursor-pointer rounded-md flex justify-center items-center">
+                            <div @click="open_menu()" class="text-blue-500 hover:bg-blue-500 hover:text-white duration-500 p-1 border border-gray-300 dark:bg-zinc-900 dark:border-black cursor-pointer rounded-md flex justify-center items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
                                     <path fill-rule="evenodd" d="M18.97 3.659a2.25 2.25 0 00-3.182 0l-10.94 10.94a3.75 3.75 0 105.304 5.303l7.693-7.693a.75.75 0 011.06 1.06l-7.693 7.693a5.25 5.25 0 11-7.424-7.424l10.939-10.94a3.75 3.75 0 115.303 5.304L9.097 18.835l-.008.008-.007.007-.002.002-.003.002A2.25 2.25 0 015.91 15.66l7.81-7.81a.75.75 0 011.061 1.06l-7.81 7.81a.75.75 0 001.054 1.068L18.97 6.84a2.25 2.25 0 000-3.182z" clip-rule="evenodd" />
                                 </svg>
@@ -250,7 +255,7 @@
                     </svg>
                 </div>
 
-                <div>
+                <div @click="copic_message">
                     Copier
                 </div>
 
@@ -291,6 +296,11 @@
 
         </div>
 
+        <!-- la div pour envoyer des petite notification aux utilisateur -->
+        <div class="notify fixed right-5 top-10 bg-gray-500 text-white p-2 border rounded-md hidden">
+            {{ notification.message }}
+        </div>
+
     </div>
 </template>
 
@@ -302,12 +312,14 @@
     import 'emoji-mart-vue-fast/css/emoji-mart.css'
 
     import Contact from '../components/ContactComponent.vue'
+    import cameraComponent from '@/components/cameraComponent.vue'
 
-    export default{
+    export default {
 
         components: {
             Picker,
-            Contact
+            Contact,
+            cameraComponent
         },
         
         data(){
@@ -338,8 +350,13 @@
                     visible: 'translate-y-full',
                     init: new EmojiIndex(data)
                 },
+
+                notification: {
+                    message: null,
+                },
                 
                 textMessage: '',  // le message ecrit dans l'input
+                message_click_droit: null,  // le contenue du message sur la quelle on a cliker
 
                 detec_send: {   // pour actualiser la partie des contacts afin de montrer le message qui vient d'ecre envoyer
                     read: false,
@@ -348,6 +365,8 @@
 
                 obseveur_write: null, // pour actualiser la partie contacts afin de montre l'utilisateur qui ecrir
                 obseveur_enligne: null, // pour actualiser la partie contacts afin de montre l'utilisateur qui est en ligne
+
+                open_camera: null,  // pour ouvri ou fermer la camera permettant d'envoyer des images ou video
             }
             
         },
@@ -397,7 +416,7 @@
             }, 1000);
 
             // pour observer si cette onglet est ouvert
-            this.observe_visible()
+            // this.observe_visible()
 
             
 
@@ -410,7 +429,7 @@
 
                 if (e.emetteur_id == this.recepteur.id) {
                     this.recepteur.status = e.enligne
-                    this.$fonct.set_recept_storage(this.recepteur) 
+                    this.$fonct.set_storage(this.recepteur, "recepteur") 
                 }
 
                 this.obseveur_enligne = e
@@ -418,7 +437,7 @@
 
 
             window.Echo.private('test-channel-' + this.user.id)
-            .listen('TestName',(e) =>{ // pour le recepteur
+            .listen('TestName',(e) =>{ // pour le recepteur (la reception d'un message)
                
                 // requette pour marquer les message en 
                 var form = {
@@ -427,7 +446,7 @@
                 }
                
                 // on verifier si c'est la page de l'emetteur qui est ouverte cote recepteur
-                if (e.emetteur_id == this.recepteur.id) { // l'utilisateur a vue (on marque 2)
+                if (e.emetteur_id == this.recepteur.id && this.$store.state.user.status == "en ligne") { // l'utilisateur a vue (on marque 2)
                     console.log("je suis sur ta page...")
                     form.status = 2
                     this.affiche_message(e.messages.messages)
@@ -443,7 +462,7 @@
                 }
 
             })
-            .listen('SetVueMessagesEv',(e) =>{ // pour l'emetteur
+            .listen('SetVueMessagesEv',(e) =>{ // pour l'emetteur(le retour pour maquer l'etat du message(vue, partir...))
                 console.log("SetVueMessagesEv...")
                 this.affiche_message(e.messages)
 
@@ -535,6 +554,17 @@
                 this.emoji.visible = '-translate-y-full', this.visibleFiltre = true
             },
 
+            // pour ouvri le bouton du menu(l'icon de l'epincle)
+            open_menu(){
+                this.menu.visible = '-translate-y-full'
+                this.visibleFiltre = true
+            },
+
+            close_menu(){
+                this.visibleFiltre = false              // pour fermer la div du filtre
+                this.menu.visible = 'translate-y-full'  // pour fermer le menu epingle
+            },
+
             // pour inserer l'emoji ou se situe le focus
             add_emojie_focus(emoji){
 
@@ -562,7 +592,7 @@
                     
                 var recept
                 if (recepteur == null) { // on recuper dans le localStorage
-                    recept = await this.$fonct.get_recept_storage()
+                    recept = await this.$fonct.get_storage("recepteur")
                 } else { // on recupere directement le recepteur
                     recept = recepteur
                 }
@@ -586,7 +616,6 @@
 
             affiche_message(messages){
                 this.messages = messages
-                console.log("affiche_message")
                 this.actualise_contact()  // pour actualiser la partie des contacts
 
                 this.scroll_all()   // pour faire sroller le conteneur de message jusqu'a la fin
@@ -677,7 +706,6 @@
                 this.user_write.time = setTimeout(() => {
                     this.user_write.write = false
                     this.send_write(0)
-                    console.log("stope...")
                 }, 1500);
             },
 
@@ -717,11 +745,31 @@
 
                     if (document.visibilityState == 'visible') {
                         this.send_ligne("en ligne")
+                        this.$store.state.user.status = "en ligne"
+                        
                     } else {
                         var time = this.$fonct.get_date() + " " + this.$fonct.get_heure()
                         this.send_ligne(time)
+                        this.$store.state.user.status = time
                     }
+
+                    this.$fonct.set_storage(this.$store.state.user, 'user') // on actualise dans le localstorage
                     
+                })
+            },
+
+            // pour copier le message dans la presse papier
+            copic_message(){
+
+                navigator.clipboard.writeText(this.message_click_droit.message)
+                .then(() => {
+                    this.notification.message = "Message copier dans la press papier."
+                    this.$animation.open_translate('.notify', 500)
+
+                    setTimeout(() => {
+                        this.$animation.close_translate('.notify', 500, 'right')
+                    }, 3000);
+                    console.log(this.message_click_droit.message)
                 })
             },
 

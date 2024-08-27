@@ -57,51 +57,6 @@ export default {
         }, 1000);
     },
 
-    close_translate(class_elm, duration=1000, direction="left"){
-
-        var element = document.querySelector(`.${class_elm}`)
-
-        var dir = -1
-        var val_x = 100
-        var val_y = 0
-
-        setTimeout(() => {
-            element.style.display = "none"
-        }, duration + 5);
-
-        element.style.transition = `${duration}ms`
-
-        if (direction == "top") {
-            dir = -1
-            val_x = 0
-            val_y = 100
-        } else if(direction == "rigth"){
-            dir = 1
-            val_x = 100
-            val_y = 0
-        } else if(direction == "bottom"){
-            dir = 1
-            val_x = 0
-            val_y = 100
-        }
-
-        element.style.transform = "translate("+ (dir * val_x) +"%, "+ (dir * val_y) +"%)"
-
-    },
-
-    open_translate(class_elm, duration=1000, display="block"){
-
-        var element = document.querySelector(`.${class_elm}`)
-
-        setTimeout(() => {
-            element.style.transition = `${duration}ms`
-            element.style.transform = "translate(0,0)"
-        }, 10);
-
-        element.style.display = display
-
-    },
-
     get_heure(){
         var date = new Date()
 
@@ -208,8 +163,8 @@ export default {
         return tableau
     },
 
-    async get_recept_storage(){
-        var data = localStorage.getItem('recepteur')
+    async get_storage(key){
+        var data = localStorage.getItem(key)
                 
         if (data) {
             var json = JSON.parse(data)
@@ -222,8 +177,8 @@ export default {
         return null
     },
 
-    async set_recept_storage(recepteur){
-        const encode = await this.encrypt(JSON.stringify(recepteur), store.state.cles)
-        localStorage.setItem("recepteur", encode)
+    async set_storage(data, key){
+        const encode = await this.encrypt(JSON.stringify(data), store.state.cles)
+        localStorage.setItem(key, encode)
     }
 }
